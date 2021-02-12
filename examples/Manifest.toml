@@ -120,7 +120,7 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[GLOM_RV_Example]]
 deps = ["Dates", "GPLinearODEMaker", "LineSearches", "LinearAlgebra", "Optim", "Random", "SpecialFunctions", "Statistics", "Unitful", "UnitfulAstro"]
-git-tree-sha1 = "922a7468fa4819df993d11faf1b161167461b5de"
+git-tree-sha1 = "9f4e9cd8a4df17eea3e8adc993b80d8d08586946"
 repo-rev = "main"
 repo-url = "/Users/az/Documents/GitHub/GLOM_RV_Example"
 uuid = "3d369fb6-3996-5181-b3f3-8f741c4f9e19"
