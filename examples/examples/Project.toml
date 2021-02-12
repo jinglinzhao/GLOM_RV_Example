@@ -1,0 +1,7 @@
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+GLOM_RV_Example = "3d369fb6-3996-5181-b3f3-8f741c4f9e19"
+GPLinearODEMaker = "27ef9b34-1325-4cec-ba33-00f2f4637873"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+UnitfulAstro = "6112ee07-acf9-5e0f-b108-d242c714bf9f"
