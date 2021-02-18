@@ -1,4 +1,6 @@
+cd("/Users/az/Documents/GitHub/GLOM_RV_Example")
 using Pkg
+Pkg.add(;path="/Users/az/Documents/GitHub/GLOM_RV_Example")
 Pkg.activate("examples")
 Pkg.instantiate()
 
@@ -10,6 +12,8 @@ using LinearAlgebra
 
 # for importing the data from CSV
 using DataFrames
+
+import Pkg; Pkg.add("CSV")
 using CSV
 
 # For GLOM
@@ -36,10 +40,24 @@ kernel_function, num_kernel_hyperparameters = GLOM.include_kernel(kernel_name)
 
 # CHANGE: the stars rotation rate which is used as the first guess for some GLOM
 # hyperparameters and starting point for priors
-star_rot_rate = 16.28  # days
+
+STAR_ID = "101501"
+star_rot_rate = 17.1
+# star_rot_rate = 16.28  # days
+
+# STAR_ID = "26965"
+# star_rot_rate = 40
+
+# STAR_ID = "10700"
+# star_rot_rate = 34
+
+# STAR_ID = "34411"
+# star_rot_rate = 28
+
 
 # importing Yale's 101501 data
-data = CSV.read("examples/101501_activity.csv", DataFrame)
+file_dir = "/Users/az/Documents/GitHub/EXPRES_DR2/"*STAR_ID*"/"
+data = CSV.read(file_dir*STAR_ID*"_activity.csv", DataFrame)
 
 # CHANGE: observation times go here
 obs_xs = collect(data[!, "Time [MJD]"])
@@ -49,29 +67,44 @@ GLOM_RV.remove_mean!(obs_xs)
 
 # CHANGE: rvs and their errors go here
 obs_rvs = data[!, "CCF RV [m/s]"]
-inject_ks = GLOM_RV.kep_signal(; K=50u"m/s", P=sqrt(2)*5u"d", M0=rand()*2*π, ω_or_k=rand()*2*π, e_or_h=0.1)
-obs_rvs[:] .+= ustrip.(inject_ks.(obs_xs.*u"d"))
-obs_rvs_err = data[!, "CCF RV Error [m/s]"]
+# inject_ks = GLOM_RV.kep_signal(; K=2u"m/s", P=sqrt(2)*5u"d", M0=rand()*2*π, ω_or_k=rand()*2*π, e_or_h=0.1)
+# obs_rvs[:] .+= ustrip.(inject_ks.(obs_xs.*u"d"))
+obs_rvs_err = data[!, "CCF RV Err. [m/s]"]
 
 # CHANGE: activity indicators and thier errors go here
 # you can actually have as many as you want, but obviously it will take longer
 # to fit
-obs_indicator1 = data[!, "CCF FWHM [m/s]"]
-obs_indicator1_err = data[!, "CCF FWHM Err. [m/s]"]
-obs_indicator2 = data[!, "BIS [m/s]"]
-obs_indicator2_err = repeat([std(obs_indicator2)], length(obs_indicator2))  # I just put something here
+using DelimitedFiles
+obs_indicator1 = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_C1.txt")))
+obs_indicator1_err = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_err_C1.txt")))
+obs_indicator2 = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_C2.txt")))
+obs_indicator2_err = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_err_C2.txt")))  # I just put something here
+obs_indicator3 = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_C3.txt")))
+obs_indicator3_err = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_err_C3.txt")))
+obs_indicator4 = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_C4.txt")))
+obs_indicator4_err = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_err_C4.txt")))
+# obs_indicator5 = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_C5.txt")))
+# obs_indicator5_err = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_err_C5.txt")))
+# obs_indicator6 = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_C6.txt")))
+# obs_indicator6_err = collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_err_C6.txt")))
 
 # removing means as the GP model assumes zero mean
 GLOM_RV.remove_mean!(obs_rvs)
 GLOM_RV.remove_mean!(obs_indicator1)
 GLOM_RV.remove_mean!(obs_indicator2)
+GLOM_RV.remove_mean!(obs_indicator3)
+GLOM_RV.remove_mean!(obs_indicator4)
+# GLOM_RV.remove_mean!(obs_indicator5)
+# GLOM_RV.remove_mean!(obs_indicator6)
 
 # CHANGE: change these lines if you add more than 2 indicators
 # this takes the data and riffles it together so it takes the form
 # [rv_1, ind1_1, ind2_1, rv_2, ind1_2, ind2_2, ...]
-n_out = 3  # number of indicators + 1
-obs_ys = collect(Iterators.flatten(zip(obs_rvs, obs_indicator1, obs_indicator2)))
-obs_noise = collect(Iterators.flatten(zip(obs_rvs_err, obs_indicator1_err, obs_indicator2_err)))
+n_out = 5  # number of indicators + 1
+# obs_ys = collect(Iterators.flatten(zip(obs_rvs, obs_indicator1, obs_indicator2, obs_indicator3, obs_indicator4, obs_indicator5, obs_indicator6)))
+obs_ys = collect(Iterators.flatten(zip(obs_rvs, obs_indicator1, obs_indicator2, obs_indicator3, obs_indicator4)))
+# obs_noise = collect(Iterators.flatten(zip(obs_rvs_err, obs_indicator1_err, obs_indicator2_err, obs_indicator3_err, obs_indicator4_err, obs_indicator5_err, obs_indicator6_err)))
+obs_noise = collect(Iterators.flatten(zip(obs_rvs_err, obs_indicator1_err, obs_indicator2_err, obs_indicator3_err, obs_indicator4_err)))
 
 # How many differention orders we want in the GLOM model
 n_dif = 2 + 1
@@ -79,7 +112,8 @@ n_dif = 2 + 1
 # CHANGE: consider changing a0 (the GLOM coefficients that are used, see
 # commented lines below)
 # If all a's active:
-problem_definition = GLOM.GLO(kernel_function, num_kernel_hyperparameters, n_dif, n_out, obs_xs, copy(obs_ys); noise=copy(obs_noise), a0=[[1. 1 1];[1 1 1];[1 1 1]])
+# problem_definition = GLOM.GLO(kernel_function, num_kernel_hyperparameters, n_dif, n_out, obs_xs, copy(obs_ys); noise=copy(obs_noise), a0=[[1. 1 1];[1 1 1];[1 1 1];[1 1 1]; [1 1 1]; [1 1 1]; [1 1 1]])
+problem_definition = GLOM.GLO(kernel_function, num_kernel_hyperparameters, n_dif, n_out, obs_xs, copy(obs_ys); noise=copy(obs_noise), a0=[[1. 1 1];[1 1 1];[1 1 1];[1 1 1]; [1 1 1]])
 # problem_definition = GLOM.GLO(kernel_function, num_kernel_hyperparameters, n_dif, n_out, obs_xs, copy(obs_ys); noise=copy(obs_noise), a0=[[1. 1 0];[1 0 1];[1 0 1]])
 
 # Makes the std of each output equal to 1, improves fitting stability
@@ -125,17 +159,17 @@ GLOM_rvs_at_plot_xs, GLOM_ind1_at_plot_xs, GLOM_ind2_at_plot_xs = post
 GLOM_rvs_err_at_plot_xs, GLOM_ind1_err_at_plot_xs, GLOM_ind2_err_at_plot_xs = post_err
 GLOM_rvs_at_obs_xs, GLOM_ind1_at_obs_xs, GLOM_ind2_at_obs_xs = post_obs
 
-#=
-using Plots
-plt = scatter(obs_xs, obs_rvs, yerror=obs_rvs_err)
-plot!(plt, plot_xs, GLOM_rvs_at_plot_xs, ribbons=GLOM_rvs_err_at_plot_xs, fillalpha=0.3)
 
-plt = scatter(obs_xs, obs_indicator1, yerror=obs_indicator1_err)
-plot!(plt, plot_xs, GLOM_ind1_at_plot_xs, ribbons=GLOM_ind1_err_at_plot_xs, fillalpha=0.3)
+# using Plots
+# plt = scatter(obs_xs, obs_rvs, yerror=obs_rvs_err)
+# plot!(plt, plot_xs, GLOM_rvs_at_plot_xs, ribbons=GLOM_rvs_err_at_plot_xs, fillalpha=0.3)
+#
+# plt = scatter(obs_xs, obs_indicator1, yerror=obs_indicator1_err)
+# plot!(plt, plot_xs, GLOM_ind1_at_plot_xs, ribbons=GLOM_ind1_err_at_plot_xs, fillalpha=0.3)
+#
+# plt = scatter(obs_xs, obs_indicator2, yerror=obs_indicator2_err)
+# plot!(plt, plot_xs, GLOM_ind2_at_plot_xs, ribbons=GLOM_ind2_err_at_plot_xs, fillalpha=0.3)
 
-plt = scatter(obs_xs, obs_indicator2, yerror=obs_indicator2_err)
-plot!(plt, plot_xs, GLOM_ind2_at_plot_xs, ribbons=GLOM_ind2_err_at_plot_xs, fillalpha=0.3)
-=#
 
 ## Coefficient exploration
 
@@ -421,3 +455,48 @@ println("evidence for GLOM + planet model: " * string(E2))
 
 # # This should be pretty close to true
 # GLOM_RV.test_∇∇nlogL_kep(problem_definition_rv, workspace.Σ_obs, current_ks; include_priors=true)
+
+#--------------------------------------------------------------
+# Added for my use
+#--------------------------------------------------------------
+
+post, post_err, post_obs = GLOM_RV.GLOM_posteriors(problem_definition, plot_xs, fit3_total_hyperparameters, y_obs = GLOM_RV.remove_kepler(problem_definition_rv, current_ks))
+
+GLOM_rvs_at_plot_xs, GLOM_ind1_at_plot_xs, GLOM_ind2_at_plot_xs = post
+GLOM_rvs_err_at_plot_xs, GLOM_ind1_err_at_plot_xs, GLOM_ind2_err_at_plot_xs = post_err
+GLOM_rvs_at_obs_xs, GLOM_ind1_at_obs_xs, GLOM_ind2_at_obs_xs = post_obs
+
+plt = scatter(obs_xs, obs_rvs, yerror=obs_rvs_err)
+plot!(plt, plot_xs, GLOM_rvs_at_plot_xs, ribbons=GLOM_rvs_err_at_plot_xs, fillalpha=0.3)
+
+plt = scatter(obs_xs, obs_indicator1, yerror=obs_indicator1_err)
+plot!(plt, plot_xs, GLOM_ind1_at_plot_xs, ribbons=GLOM_ind1_err_at_plot_xs, fillalpha=0.3)
+
+plt = scatter(obs_xs, obs_indicator2, yerror=obs_indicator2_err)
+plot!(plt, plot_xs, GLOM_ind2_at_plot_xs, ribbons=GLOM_ind2_err_at_plot_xs, fillalpha=0.3)
+
+rvs = current_ks.(obs_xs*u"d")
+rvs = ustrip.(rvs)
+res = obs_rvs - (GLOM_rvs_at_obs_xs + rvs)
+plt = scatter(obs_xs, res, yerror=obs_rvs_err)
+
+Plots.histogram(res./obs_rvs_err)
+
+# save output to file
+using DelimitedFiles
+open(STAR_ID*"_GLOM_rvs.txt", "w") do io
+           writedlm(io, GLOM_rvs_at_obs_xs)
+end
+
+open(STAR_ID*"_planet_rvs.txt", "w") do io
+           writedlm(io, rvs)
+end
+
+
+post, post_err, post_obs = GLOM_RV.GLOM_posteriors(problem_definition, obs_xs, fit3_total_hyperparameters, y_obs = GLOM_RV.remove_kepler(problem_definition_rv, current_ks))
+
+GLOM_rvs_err_at_plot_xs, GLOM_ind1_err_at_plot_xs, GLOM_ind2_err_at_plot_xs = post_err
+
+open(STAR_ID*"_err_GLOM_rvs.txt", "w") do io
+           writedlm(io, GLOM_rvs_err_at_plot_xs)
+end
