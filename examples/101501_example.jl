@@ -1,4 +1,4 @@
-cd("/Users/az/Documents/GitHub/GLOM_RV_Example")
+# cd("/Users/az/Documents/GitHub/GLOM_RV_Example")
 using Pkg
 Pkg.activate("examples")
 Pkg.instantiate()
@@ -55,8 +55,8 @@ star_rot_rate = 17.1
 # star_rot_rate = 28
 
 # importing Yale's 101501 data
-file_dir = "/Users/az/Documents/GitHub/EXPRES_DR2/"*STAR_ID*"/"
-data = CSV.read(file_dir*STAR_ID*"_activity.csv", DataFrame)
+# file_dir = "/Users/az/Documents/GitHub/EXPRES_DR2/"*STAR_ID*"/"
+data = CSV.read("./examples/"*STAR_ID*"_activity.csv", DataFrame)
 
 # CHANGE: observation times go here
 obs_xs = collect(data[!, "Time [MJD]"])
@@ -91,9 +91,9 @@ end
 # you can actually have as many as you want, but obviously it will take longer
 # to fit
 using DelimitedFiles
-for j in 1:6
-    add_indicator!(rvs_and_inds_holder, rvs_and_inds_err_holder, collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_C"*string(j)*".txt"))), collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_err_C"*string(j)*".txt"))) )
-end
+# for j in 1:6
+#     add_indicator!(rvs_and_inds_holder, rvs_and_inds_err_holder, collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_C"*string(j)*".txt"))), collect(Iterators.flatten(readdlm(file_dir*STAR_ID*"_err_C"*string(j)*".txt"))) )
+# end
 add_indicator!(rvs_and_inds_holder, rvs_and_inds_err_holder, data[!, "CCF FWHM [m/s]"], data[!, "CCF FWHM Err. [m/s]"])
 add_indicator!(rvs_and_inds_holder, rvs_and_inds_err_holder, data[!, "BIS [m/s]"], repeat([std(data[!, "BIS [m/s]"])], length(data[!, "BIS [m/s]"])))
 
@@ -106,7 +106,7 @@ inds_to_use = [1,2,3]  # 1:length(rvs_and_inds_holder) to use all
 @jzhao=#
 individual_gp = true #false#
 
-for n_gp in 0:6
+for n_gp in 0:2
 
     if individual_gp == true
         inds_to_use = [n_gp+1]
